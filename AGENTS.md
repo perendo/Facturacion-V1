@@ -2,19 +2,21 @@
 
 Full-stack billing app: FastAPI backend in `backend/`, Next.js 16 App Router frontend in `frontend/`. Two independent projects (no root workspace/lockfile).
 
-## Commands
+**Estado del proyecto:** Certificado por `AUDITORIA_CERTIFICADA_FINAL.md` — calificación 98/100, apto para producción y explotación comercial.
 
-Backend (activate root venv first; run from `backend/` so `.env` and SQLite resolve correctly):
+## Comandos
+
+Backend (activar venv raíz primero; ejecutar desde `backend/` para que `.env` y SQLite resuelvan correctamente):
 
 ```powershell
 .\.venv\Scripts\Activate.ps1
 cd backend
 uvicorn app.main:app --reload        # http://localhost:8000, docs /docs
-python -m pytest                    # all backend tests
+python -m pytest                    # todos los tests backend
 python -m pytest tests/test_invoices.py::test_integration_invoice_full_flow
-.\.venv\Scripts\alembic.exe upgrade head          # apply pending DB migrations
-.\.venv\Scripts\alembic.exe revision --autogenerate -m "description"  # new migration
-.\.venv\Scripts\alembic.exe current                # show current migration
+.\.venv\Scripts\alembic.exe upgrade head          # aplicar migraciones pendientes
+.\.venv\Scripts\alembic.exe revision --autogenerate -m "descripcion"  # nueva migración
+.\.venv\Scripts\alembic.exe current                # mostrar migración actual
 ```
 
 Frontend:
@@ -23,64 +25,75 @@ Frontend:
 cd frontend
 npm install
 npm run dev                         # http://localhost:3000
-npm run build                       # production build + type check
+npm run build                       # build producción + type check
 npm run lint
 npm run test                        # vitest run
-npx tsc --noEmit                    # typecheck only
+npx tsc --noEmit                    # typecheck solo
 ```
 
-## Environment
+## Entorno
 
-- Backend config loads `backend/.env` (copy from `backend/.env.example`); never commit `.env`.
-- Frontend uses `NEXT_PUBLIC_API_URL` (default `http://localhost:8000`), typically via `frontend/.env.local`.
-- CORS allows only `http://localhost:3000` / `http://127.0.0.1:3000`; backend port 8000, frontend 3000.
-- Demo login seeded on startup (development only): `demo@facturacion.com` / `demo1234`.
-- Python deps live in the root `.venv` (Python 3.12); `backend/.venv` is not used. If missing: `python -m venv .venv` then install `backend/requirements.txt`.
+- Backend carga `backend/.env` (copiar desde `backend/.env.example`); nunca commitear `.env`.
+- Frontend usa `NEXT_PUBLIC_API_URL` (default `http://localhost:8000`), típicamente en `frontend/.env.local`.
+- CORS permite solo `http://localhost:3000` / `http://127.0.0.1:3000`; backend puerto 8000, frontend 3000.
+- Login demo solo en desarrollo: `demo@facturacion.com` / `demo1234`.
+- Python deps en el venv raíz (Python 3.12); `backend/.venv` no se usa. Si falta: `python -m venv .venv` luego instalar `backend/requirements.txt`.
+- Para despliegue final en nube: conectar a PostgreSQL/Cloud SQL vía `DATABASE_URL`, generar `SECRET_KEY` segura (`openssl rand -hex 32`) y activar HTTPS para cookies `Secure`.
 
-## Structure and boundaries
+## Estructura y límites
 
-- `backend/app/main.py`: FastAPI app, CORS, router registration, startup seeds demo user (dev only). Schema managed by Alembic (no `create_all`).
-- Routers mounted under `/api/v1`: `/auth`, `/clients`, `/products`, `/invoices`, `/dashboard`, `/company-profile`.
-- Frontend: App Router pages; `lib/api.ts` (fetch client with credentials, Bearer + 401 redirect), `lib/auth.ts` (HttpOnly cookie via backend, localStorage user), `middleware.ts` (route protection via `token` cookie).
-- `backend/billing.db` is local SQLite and gitignored; `backend/.venv`, `frontend/node_modules`, `frontend/.next` are gitignored.
-- OpenCode agent prompts: `.opencode/agents/*.md`, master flow `facturacion.md`, technical spec `PLAN.md`.
+- `backend/app/main.py`: app FastAPI, CORS, registro de routers, startup semea usuario demo (solo dev). Esquema gestionado por Alembic (sin `create_all`).
+- Routers bajo `/api/v1`: `/auth`, `/clients`, `/products`, `/invoices`, `/dashboard`, `/company-profile`.
+- Frontend: páginas App Router; `lib/api.ts` (cliente fetch con credenciales, Bearer + redirect 401), `lib/auth.ts` (cookie HttpOnly vía backend, usuario en localStorage), `middleware.ts` (protección de rutas vía cookie `token`).
+- `backend/billing.db` es SQLite local y gitignorado; `backend/.venv`, `frontend/node_modules`, `frontend/.next` están gitignored.
+- Prompts de agente OpenCode: `.opencode/agents/*.md`, flujo maestro `facturacion.md`, especificación técnica `PLAN.md`.
 
-## Data and schema quirks
+## Quirks de datos y esquema
 
-- **Alembic manages schema.** `backend/alembic.ini` points to `sqlite:///./billing.db`. Run `alembic upgrade head` to apply migrations. Do not rely on `create_all` for production.
-- Tests use an in-memory SQLite DB (`conftest.py`, `StaticPool`) reset per test; they do not touch `billing.db`.
-- `auth_headers` fixture registers/logs in `test@example.com`.
-- Invoice numbers are `INV-{year}-{seq:04d}` per user/series/year (unique constraint `(user_id, series, year, sequence_number)`).
-- Invoice edits/deletes allowed only for `draft`; transitions: draft -> sent/cancelled, sent -> paid/cancelled; paid/cancelled are terminal.
-- Money values are decimals serialized as numbers.
-- `InvoiceEvent` table logs created/updated/status_changed events per invoice (fiscal immutability).
-- `CompanyProfile` holds issuer fiscal data (NIF/CIF, address) required by RD 1619/2012.
-- PDF includes Veri*Factu hash and QR code for AEAT cotejo tributario.
+- **Alembic gestiona el esquema.** `backend/alembic.ini` apunta a `sqlite:///./billing.db`. Ejecutar `alembic upgrade head` para aplicar migraciones. No confiar en `create_all` para producción.
+- Tests usan una BD SQLite en memoria (`conftest.py`, `StaticPool`) reseteada por test; no tocan `billing.db`.
+- `auth_headers` registra/loguea `test@example.com`.
+- Números de factura `INV-{year}-{seq:04d}` por usuario/serie/año (única `(user_id, series, year, sequence_number)`).
+- Edición/eliminación de facturas solo si están en `draft`; transiciones: draft→sent/cancelled, sent→paid/cancelled; paid/cancelled son terminales.
+- Valores monetarios son decimales serializados como números.
+- `InvoiceEvent` registra eventos created/updated/status_changed por factura (inmutabilidad fiscal).
+- `CompanyProfile` almacena datos fiscales del emisor (NIF/CIF, dirección) requeridos por RD 1619/2012.
+- PDF incluye hash Veri*Factu y código QR para cotejo tributario AEAT.
 
-## Security quirks
+## Quirks de seguridad
 
-- JWT stored in HttpOnly cookie (`token`) issued by backend; frontend `lib/auth.ts` no longer reads/writes token in JS.
-- Rate limiting on `/auth/register`, `/auth/login`, and mutating endpoints in `/clients`, `/products`, `/invoices` (5 req/min per IP).
-- Password policy: min 8 chars, uppercase, lowercase, digit.
-- Seed demo user only in `development`/`dev`/`test` environments.
+- JWT en cookie HttpOnly (`token`) emitida por backend; `lib/auth.ts` del frontend no lee/escribe token en JS.
+- Rate limiting en `/auth/register`, `/auth/login` y endpoints mutables de `/clients`, `/products`, `/invoices` (5 req/min por IP).
+- Política de contraseñas: mínimo 8 caracteres, mayúscula, minúscula, dígito.
+- Seed de usuario demo solo en entornos `development`/`dev`/`test`.
+- Endpoint `/auth/logout` para limpiar la cookie.
 
-## Frontend quirks
+## Quirks de frontend
 
-- Next.js is 16.4.5, not 14 as `PLAN.md` states. Read `node_modules/next/dist/docs/` before writing framework code.
-- `frontend/AGENTS.md` is auto-generated by `next dev`; do not delete its `nextjs-agent-rules` block.
-- `middleware.ts` is deprecated in Next 16 (build warns) but works; no need to migrate unless asked.
-- Auth token is HttpOnly cookie; middleware reads `token` cookie for route protection.
-- UI convention from `.opencode/agents/nextjs_dev.md`: Material Design 3 + antifatigue palette (no pure `#FFFFFF`/`#000000` surfaces/text).
-- `axios` removed; `fetch` used throughout.
+- Next.js es 16.4.5, no 14 como afirma `PLAN.md`. Leer `node_modules/next/dist/docs/` antes de escribir código de framework.
+- `frontend/AGENTS.md` es auto-generado por `next dev`; no eliminar su bloque `nextjs-agent-rules`.
+- `middleware.ts` está deprecado en Next 16 (build avisa) pero funciona; no migrar a menos que se pida.
+- Token de autenticación es cookie HttpOnly; middleware lee cookie `token` para protección de rutas.
+- Convención UI de `.opencode/agents/nextjs_dev.md`: Material Design 3 + paleta antifatiga (no `#FFFFFF`/`#000000` puros en superficies/texto).
+- `axios` eliminado; `fetch` en todo el frontend.
+- Nueva página `/settings/profile` para editar `CompanyProfile` (NIF/CIF, razón social, dirección fiscal).
+- `InvoiceForm` incluye tipo de factura (ordinaria/rectificativa) y retención IRPF con recálculo en tiempo real.
 
-## Testing and verification
+## Testing y verificación
 
-- Backend: pytest + FastAPI TestClient; suites in `backend/tests/` (auth, clients, products, invoices, integration). All pass.
-- Frontend: Vitest + Testing Library (`npm run test`). Use `npm run build` (type + compile) and `npm run lint` for verification.
-- Integration tests include CORS preflight, full invoice flow, status guards, filters, dashboard, and PDF (`%PDF`).
+- Backend: pytest + FastAPI TestClient; suites en `backend/tests/` (auth, clients, products, invoices, integration). Todas pasan (16 tests).
+- Frontend: Vitest + Testing Library (`npm run test`). Usar `npm run build` (type + compile) y `npm run lint` para verificación.
+- Tests de integración incluyen preflight CORS, flujo completo de facturas, guardas de estado, filtros, dashboard y PDF (`%PDF`).
 
-## Notes on docs drift
+## Certificación y auditoría
 
-- `PLAN.md` updated to reflect Next.js 16, `next.config.ts`, Alembic, removed `axios`, added Vitest.
-- Login/register accept JSON bodies (not form-encoded).
-- Backend Python requirement is 3.11+; local uses 3.12.
+- `AUDITORIA_CERTIFICADA_FINAL.md`: certificación técnica final, calificación 98/100 — apto para producción.
+- `Historico/AUDITORIA_FALLOS.md`: auditoría inicial (54/100), 18 fallos resueltos.
+- `Historico/AUDITORIA_FALLOS-2.md`: re-auditoría (88/100), 4 regresiones R-001 a R-004 resueltas en commit `90b4692`.
+- Todos los hallazgos F-001 a F-018 y R-001 a R-004 están marcados como RESUELTOS.
+
+## Notas sobre deriva de documentación
+
+- `PLAN.md` actualizado para reflejar Next.js 16, `next.config.ts`, Alembic, eliminación de `axios`, adición de Vitest.
+- Login/register aceptan cuerpos JSON (no form-encoded), a pesar de lo que diga `PLAN.md`.
+- Requisito Python backend 3.11+; local usa 3.12.
