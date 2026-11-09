@@ -1,0 +1,30 @@
+# Entornos virtuales Python
+.venv/
+venv/
+ENV/
+env/
+
+# Ficheros temporales y compilados Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.sqlite3
+*.db
+
+# Variables de entorno con credenciales
+.env
+.env.local
+.env.*.local
+
+# Node & Frontend
+node_modules/
+.next/
+dist/
+out/
+build/
+
+# Archivos generados
+*.pdf
+test_invoice.pdf
+.DS_Store
+Thumbs.db

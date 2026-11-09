@@ -6,6 +6,7 @@ import type { Client } from "@/lib/types";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
+import Modal from "@/components/ui/Modal";
 
 function ClientDetailInner() {
   const params = useParams();
@@ -15,6 +16,7 @@ function ClientDetailInner() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -66,13 +68,16 @@ function ClientDetailInner() {
     }
   };
 
-  const remove = async () => {
-    if (!confirm("¿Eliminar cliente?")) return;
+  const remove = () => setConfirmDelete(true);
+
+  const doDelete = async () => {
     try {
       await apiDelete(`/clients/${id}`);
       router.push("/clients");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error");
+    } finally {
+      setConfirmDelete(false);
     }
   };
 
@@ -116,6 +121,18 @@ function ClientDetailInner() {
           </div>
         )}
       </Card>
+
+      <Modal open={confirmDelete} onClose={() => setConfirmDelete(false)} title="Confirmar eliminación">
+        <p className="text-sm text-slate-600">¿Eliminar cliente?</p>
+        <div className="flex justify-end gap-2 pt-3">
+          <Button variant="secondary" onClick={() => setConfirmDelete(false)}>
+            Cancelar
+          </Button>
+          <Button variant="danger" onClick={doDelete}>
+            Eliminar
+          </Button>
+        </div>
+      </Modal>
     </div>
   );
 }

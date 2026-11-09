@@ -17,20 +17,24 @@ Aplicación web full-stack para gestión de facturación de pequeños negocios/f
 ## 2. Stack tecnológico
 
 ### Backend (`backend/`)
-- Python 3.11+
+- Python 3.11+ (local: 3.12)
 - FastAPI (ASGI) + Uvicorn
 - SQLAlchemy 2.x (ORM) + SQLite (archivo `billing.db`)
 - Pydantic v2 (schemas/validación)
 - python-jose (JWT) + passlib[bcrypt] (hashing)
 - python-multipart (formularios, opcional)
 - pytest + httpx (tests)
+- Alembic (migraciones de base de datos)
+- fpdf2 (generación de PDF)
+- qrcode[pil] (códigos QR para Veri*Factu)
 
 ### Frontend (`frontend/`)
-- Next.js 14+ (App Router) + TypeScript
-- Tailwind CSS
-- fetch/axios para consumo de API
+- Next.js 16 (App Router) + TypeScript
+- Tailwind CSS 4
+- fetch para consumo de API (axios eliminado)
 - react-hook-form + zod (formularios/validación)
 - Recharts (opcional, gráficos del dashboard)
+- Vitest + Testing Library (tests)
 
 ## 3. Estructura de carpetas
 
@@ -65,18 +69,25 @@ EquipoDeAgentes/
 │   │   │   └── dashboard.py
 │   │   ├── services/
 │   │   │   ├── auth_service.py     # hashing, JWT
-│   │   │   ├── invoice_service.py  # numeración, cálculos
-│   │   │   └── dashboard_service.py
+│   │   │   ├── invoice_service.py  # numeración, cálculos, Veri*Factu
+│   │   │   ├── dashboard_service.py
+│   │   │   └── pdf_service.py
 │   │   ├── dependencies.py         # get_current_user
-│   │   └── utils.py
-│   ├── tests/
-│   │   ├── test_auth.py
-│   │   ├── test_clients.py
-│   │   ├── test_products.py
-│   │   ├── test_invoices.py
-│   │   └── conftest.py
-│   ├── requirements.txt
-│   └── billing.db                  # generado
+│   │   ├── rate_limit.py           # rate limiting por IP
+│   │   ├── utils.py
+│   │   ├── alembic.ini             # configuración de migraciones
+│   │   ├── alembic/                # scripts de migración Alembic
+│   │   │   ├── env.py
+│   │   │   └── versions/
+│   │   ├── tests/
+│   │   │   ├── test_auth.py
+│   │   │   ├── test_clients.py
+│   │   │   ├── test_products.py
+│   │   │   ├── test_invoices.py
+│   │   │   ├── test_integration.py
+│   │   │   └── conftest.py
+│   │   ├── requirements.txt
+│   │   └── billing.db                  # generado (gitignored)
 └── frontend/
     ├── app/
     │   ├── layout.tsx
@@ -100,13 +111,16 @@ EquipoDeAgentes/
     │   ├── invoices/
     │   └── dashboard/
     ├── lib/
-    │   ├── api.ts                  # cliente HTTP con Bearer
-    │   ├── auth.ts                 # token storage
+    │   ├── api.ts                  # cliente HTTP fetch con credenciales
+    │   ├── auth.ts                 # token storage (HttpOnly cookie)
     │   └── types.ts
     ├── middleware.ts               # protección de rutas
     ├── tailwind.config.ts
-    ├── next.config.js
-    └── package.json
+    ├── next.config.ts
+    ├── vitest.config.ts            # configuración de tests
+    ├── vitest.setup.ts             # setup de tests
+    ├── package.json
+    └── package-lock.json
 ```
 
 ## 4. Modelo de datos

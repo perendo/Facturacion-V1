@@ -72,4 +72,4 @@ def test_dashboard_summary(client, auth_headers):
     assert r.status_code == 200
     d = r.json()
     assert d["count_by_status"]["draft"] == 1
-    assert float(d["total_invoiced"]) == 10.0
+    assert float(d["total_invoiced"]) == 0.0

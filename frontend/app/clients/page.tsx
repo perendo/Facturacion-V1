@@ -29,6 +29,7 @@ export default function ClientsPage() {
   const [editing, setEditing] = useState<Client | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
+  const [toDelete, setToDelete] = useState<number | null>(null);
 
   const load = async (q?: string) => {
     setLoading(true);
@@ -92,13 +93,17 @@ export default function ClientsPage() {
     }
   };
 
-  const remove = async (id: number) => {
-    if (!confirm("¿Eliminar cliente?")) return;
+  const remove = (id: number) => setToDelete(id);
+
+  const confirmDelete = async () => {
+    if (toDelete === null) return;
     try {
-      await apiDelete(`/clients/${id}`);
+      await apiDelete(`/clients/${toDelete}`);
+      setToDelete(null);
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error");
+      setToDelete(null);
     }
   };
 
@@ -183,6 +188,18 @@ export default function ClientsPage() {
               Guardar
             </Button>
           </div>
+        </div>
+      </Modal>
+
+      <Modal open={toDelete !== null} onClose={() => setToDelete(null)} title="Confirmar eliminación">
+        <p className="text-sm text-slate-600">¿Eliminar cliente?</p>
+        <div className="flex justify-end gap-2 pt-3">
+          <Button variant="secondary" onClick={() => setToDelete(null)}>
+            Cancelar
+          </Button>
+          <Button variant="danger" onClick={confirmDelete}>
+            Eliminar
+          </Button>
         </div>
       </Modal>
     </div>

@@ -1,21 +1,18 @@
-const TOKEN_KEY = "token";
 const USER_KEY = "user";
 
 export function getToken(): string | null {
-  if (typeof window === "undefined") return null;
-  return localStorage.getItem(TOKEN_KEY);
+  // Tokens are stored in an HttpOnly cookie by the backend and are not
+  // accessible from JavaScript (mitigates XSS token theft).
+  return null;
 }
 
-export function setToken(token: string): void {
-  if (typeof window === "undefined") return;
-  localStorage.setItem(TOKEN_KEY, token);
-  setCookie(TOKEN_KEY, token, 1);
+export function setToken(_token: string): void {
+  // No-op: authentication cookie is issued by the backend.
+  void _token;
 }
 
 export function clearToken(): void {
-  if (typeof window === "undefined") return;
-  localStorage.removeItem(TOKEN_KEY);
-  removeCookie(TOKEN_KEY);
+  // No-op: cookie is cleared by the backend /auth/logout endpoint.
 }
 
 export function getUser<T = unknown>(): T | null {
@@ -40,21 +37,15 @@ export function clearUser(): void {
 }
 
 export function clearAuth(): void {
-  clearToken();
   clearUser();
+  if (typeof window !== "undefined") {
+    fetch((process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000") + "/api/v1/auth/logout", {
+      method: "POST",
+      credentials: "include",
+    }).catch(() => undefined);
+  }
 }
 
 export function isAuthenticated(): boolean {
-  return !!getToken();
-}
-
-function setCookie(name: string, value: string, days: number): void {
-  if (typeof document === "undefined") return;
-  const expires = new Date(Date.now() + days * 864e5).toUTCString();
-  document.cookie = `${name}=${encodeURIComponent(value)}; expires=${expires}; path=/; SameSite=Lax`;
-}
-
-function removeCookie(name: string): void {
-  if (typeof document === "undefined") return;
-  document.cookie = `${name}=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Lax`;
+  return !!getUser();
 }

@@ -16,3 +16,4 @@ class User(Base):
     clients = relationship("Client", back_populates="user", cascade="all, delete-orphan")
     products = relationship("Product", back_populates="user", cascade="all, delete-orphan")
     invoices = relationship("Invoice", back_populates="user", cascade="all, delete-orphan")
+    company_profile = relationship("CompanyProfile", back_populates="user", cascade="all, delete-orphan", uselist=False)

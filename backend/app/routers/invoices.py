@@ -1,7 +1,7 @@
 from datetime import date
 from typing import List, Optional
 
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, Request, status, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
@@ -10,6 +10,7 @@ from ..models import Invoice, User
 from ..schemas.invoice import InvoiceCreate, InvoiceUpdate, InvoiceRead, InvoiceStatusUpdate
 from ..services import invoice_service, pdf_service
 from ..dependencies import get_current_user
+from ..rate_limit import check_rate_limit
 
 router = APIRouter(prefix="/invoices", tags=["invoices"])
 
@@ -23,14 +24,20 @@ def _get_invoice(db, invoice_id, user_id):
 
 @router.get("", response_model=List[InvoiceRead])
 def list_invoices(
+    request: Request,
     client_id: Optional[int] = Query(default=None),
     status: Optional[str] = Query(default=None),
     date_from: Optional[date] = Query(default=None),
     date_to: Optional[date] = Query(default=None),
     number: Optional[str] = Query(default=None),
+    page: int = Query(default=1, ge=1),
+    page_size: int = Query(default=25, ge=1, le=100),
+    skip: Optional[int] = Query(default=None, ge=0),
+    limit: Optional[int] = Query(default=None, ge=1, le=100),
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    check_rate_limit(request, "invoices_list")
     q = db.query(Invoice).filter(Invoice.user_id == current_user.id)
     if client_id is not None:
         q = q.filter(Invoice.client_id == client_id)
@@ -42,15 +49,19 @@ def list_invoices(
         q = q.filter(Invoice.issue_date <= date_to)
     if number:
         q = q.filter(Invoice.number.ilike(f"%{number}%"))
-    return q.order_by(Invoice.id.desc()).all()
+    offset = skip if skip is not None else (page - 1) * page_size
+    size = limit if limit is not None else page_size
+    return q.order_by(Invoice.id.desc()).offset(offset).limit(size).all()
 
 
 @router.post("", response_model=InvoiceRead, status_code=status.HTTP_201_CREATED)
 def create_invoice(
+    request: Request,
     payload: InvoiceCreate,
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
+    check_rate_limit(request, "invoices_create")
     invoice = invoice_service.create_invoice(db, current_user, payload)
     return invoice
 
@@ -85,7 +96,7 @@ def change_status(
     db: Session = Depends(get_db),
 ):
     invoice = _get_invoice(db, invoice_id, current_user.id)
-    invoice_service.change_status(invoice, payload.status)
+    invoice_service.change_status(invoice, payload.status, db=db, user=current_user)
     db.commit()
     db.refresh(invoice)
     return invoice

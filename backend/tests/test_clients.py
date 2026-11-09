@@ -1,5 +1,6 @@
 def test_clients_crud(client, auth_headers):
     # unauthorized
+    client.cookies.clear()
     assert client.get("/api/v1/clients").status_code == 401
 
     r = client.post("/api/v1/clients", json={"name": "Acme", "email": "acme@test.com"}, headers=auth_headers)

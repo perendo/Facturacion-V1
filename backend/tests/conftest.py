@@ -6,6 +6,7 @@ from sqlalchemy.pool import StaticPool
 
 from app.main import app
 from app.database import Base, get_db
+from app.rate_limit import reset_rate_limits
 
 engine = create_engine(
     "sqlite:///:memory:",
@@ -17,6 +18,7 @@ TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engin
 
 @pytest.fixture(autouse=True)
 def setup_db():
+    reset_rate_limits()
     Base.metadata.create_all(bind=engine)
     yield
     Base.metadata.drop_all(bind=engine)
@@ -49,12 +51,12 @@ def client(db):
 def auth_headers(client):
     client.post("/api/v1/auth/register", json={
         "email": "test@example.com",
-        "password": "password123",
+        "password": "Password123",
         "full_name": "Test User",
     })
     resp = client.post("/api/v1/auth/login", json={
         "email": "test@example.com",
-        "password": "password123",
+        "password": "Password123",
     })
     token = resp.json()["access_token"]
     return {"Authorization": f"Bearer {token}"}

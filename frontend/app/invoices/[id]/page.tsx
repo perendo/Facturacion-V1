@@ -6,6 +6,7 @@ import type { Invoice, Client } from "@/lib/types";
 import Card from "@/components/ui/Card";
 import Button from "@/components/ui/Button";
 import Badge from "@/components/ui/Badge";
+import Modal from "@/components/ui/Modal";
 import { Table, Thead, Tbody, Tr, Th, Td } from "@/components/ui/Table";
 import InvoiceForm from "@/components/invoices/InvoiceForm";
 
@@ -30,6 +31,7 @@ function InvoiceDetailInner() {
   const [editing, setEditing] = useState(false);
   const [changing, setChanging] = useState(false);
   const [downloading, setDownloading] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const load = async () => {
     setLoading(true);
@@ -71,23 +73,25 @@ function InvoiceDetailInner() {
     }
   };
 
-  const remove = async () => {
-    if (!confirm("¿Eliminar factura?")) return;
+  const remove = () => setConfirmDelete(true);
+
+  const doDelete = async () => {
     try {
       await apiDelete(`/invoices/${id}`);
       router.push("/invoices");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error");
+    } finally {
+      setConfirmDelete(false);
     }
   };
 
   const downloadPdf = async () => {
     setDownloading(true);
     try {
-      const token = (await import("@/lib/auth")).getToken();
       const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
       const res = await fetch(`${API_BASE}/api/v1/invoices/${id}/pdf`, {
-        headers: token ? { Authorization: `Bearer ${token}` } : {},
+        credentials: "include",
       });
       if (!res.ok) throw new Error("No se pudo generar el PDF");
       const blob = await res.blob();
@@ -206,6 +210,18 @@ function InvoiceDetailInner() {
           </div>
         </div>
       </Card>
+
+      <Modal open={confirmDelete} onClose={() => setConfirmDelete(false)} title="Confirmar eliminación">
+        <p className="text-sm text-slate-600">¿Eliminar factura?</p>
+        <div className="flex justify-end gap-2 pt-3">
+          <Button variant="secondary" onClick={() => setConfirmDelete(false)}>
+            Cancelar
+          </Button>
+          <Button variant="danger" onClick={doDelete}>
+            Eliminar
+          </Button>
+        </div>
+      </Modal>
     </div>
   );
 }

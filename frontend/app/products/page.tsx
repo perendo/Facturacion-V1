@@ -25,6 +25,7 @@ export default function ProductsPage() {
   const [editing, setEditing] = useState<Product | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
+  const [toDelete, setToDelete] = useState<number | null>(null);
 
   const load = async (q?: string) => {
     setLoading(true);
@@ -86,13 +87,17 @@ export default function ProductsPage() {
     }
   };
 
-  const remove = async (id: number) => {
-    if (!confirm("¿Eliminar producto?")) return;
+  const remove = (id: number) => setToDelete(id);
+
+  const confirmDelete = async () => {
+    if (toDelete === null) return;
     try {
-      await apiDelete(`/products/${id}`);
+      await apiDelete(`/products/${toDelete}`);
+      setToDelete(null);
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error");
+      setToDelete(null);
     }
   };
 
@@ -175,6 +180,18 @@ export default function ProductsPage() {
               Guardar
             </Button>
           </div>
+        </div>
+      </Modal>
+
+      <Modal open={toDelete !== null} onClose={() => setToDelete(null)} title="Confirmar eliminación">
+        <p className="text-sm text-slate-600">¿Eliminar producto?</p>
+        <div className="flex justify-end gap-2 pt-3">
+          <Button variant="secondary" onClick={() => setToDelete(null)}>
+            Cancelar
+          </Button>
+          <Button variant="danger" onClick={confirmDelete}>
+            Eliminar
+          </Button>
         </div>
       </Modal>
     </div>

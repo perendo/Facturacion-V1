@@ -55,6 +55,7 @@ export async function api<T = unknown>(path: string, options: RequestOptions = {
     ...rest,
     headers: finalHeaders,
     body: computedBody as BodyInit | undefined,
+    credentials: "include",
   });
 
   if (res.status === 401) {

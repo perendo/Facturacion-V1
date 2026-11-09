@@ -18,26 +18,11 @@ export default function Navbar() {
   const router = useRouter();
   const [user, setUserState] = useState<User | null>(null);
   const [mounted, setMounted] = useState(false);
-  const [dark, setDark] = useState(false);
 
   useEffect(() => {
     setMounted(true);
     setUserState(getUser<User>());
-    const isDark = document.documentElement.classList.contains("dark");
-    setDark(isDark);
   }, []);
-
-  const toggleTheme = () => {
-    const next = !dark;
-    setDark(next);
-    if (next) {
-      document.documentElement.classList.add("dark");
-      localStorage.setItem("theme", "dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-      localStorage.setItem("theme", "light");
-    }
-  };
 
   const token = mounted ? getToken() : null;
   if (!token) return null;
@@ -74,9 +59,6 @@ export default function Navbar() {
           <span className="hidden text-sm text-slate-600 sm:inline">
             {user?.full_name || user?.email}
           </span>
-          <Button variant="ghost" onClick={toggleTheme} aria-label="Cambiar tema">
-            {dark ? "☀️" : "🌙"}
-          </Button>
           <Button variant="ghost" onClick={logout}>
             Salir
           </Button>

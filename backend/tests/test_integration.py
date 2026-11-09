@@ -27,7 +27,7 @@ def test_integration_cors_preflight(client):
 def test_integration_auth_flow(client):
     r = client.post("/api/v1/auth/register", json={
         "email": "e2e@example.com",
-        "password": "password123",
+        "password": "Password123",
         "full_name": "E2E User",
     })
     assert r.status_code == 201
@@ -36,7 +36,7 @@ def test_integration_auth_flow(client):
     # duplicate
     r2 = client.post("/api/v1/auth/register", json={
         "email": "e2e@example.com",
-        "password": "password123",
+        "password": "Password123",
     })
     assert r2.status_code == 400
 
@@ -49,7 +49,7 @@ def test_integration_auth_flow(client):
 
     r4 = client.post("/api/v1/auth/login", json={
         "email": "e2e@example.com",
-        "password": "password123",
+        "password": "Password123",
     })
     assert r4.status_code == 200
     token = r4.json()["access_token"]
@@ -62,6 +62,7 @@ def test_integration_auth_flow(client):
 
 def test_integration_clients_crud_and_errors(client, auth_headers):
     # unauthorized
+    client.cookies.clear()
     assert client.get("/api/v1/clients").status_code == 401
 
     # invalid body
