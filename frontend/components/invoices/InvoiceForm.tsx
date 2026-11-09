@@ -27,6 +27,11 @@ const emptyLine: LineState = {
   tax_rate: "21",
 };
 
+const invoiceTypes = [
+  { value: "ordinary", label: "Factura ordinaria" },
+  { value: "rectification", label: "Factura rectificativa" },
+];
+
 interface Props {
   mode: "create" | "edit";
   invoiceId?: number;
@@ -67,6 +72,8 @@ export default function InvoiceForm({ mode, invoiceId, initial }: Props) {
   const [issueDate, setIssueDate] = useState<string>(initial?.issue_date || "");
   const [dueDate, setDueDate] = useState<string>(initial?.due_date || "");
   const [globalDiscount, setGlobalDiscount] = useState<string>(String(initial?.global_discount ?? 0));
+  const [irpfRate, setIrpfRate] = useState<string>(String(initial?.irpf_rate ?? 0));
+  const [invoiceType, setInvoiceType] = useState<string>(initial?.invoice_type || "ordinary");
   const [notes, setNotes] = useState<string>(initial?.notes || "");
   const [lines, setLines] = useState<LineState[]>(
     initial?.lines?.length
@@ -123,7 +130,14 @@ export default function InvoiceForm({ mode, invoiceId, initial }: Props) {
     setLines((prev) => prev.filter((_, i) => i !== idx));
   };
 
-  const totals = calcTotals(lines, toNumber(globalDiscount));
+  const preIrpf = calcTotals(lines, toNumber(globalDiscount));
+  const irpfAmount = (preIrpf.total * toNumber(irpfRate)) / 100;
+  const totals = {
+    subtotal: preIrpf.subtotal,
+    tax: preIrpf.tax,
+    total: preIrpf.total - irpfAmount,
+    irpfAmount,
+  };
 
   const submit = async () => {
     setError(null);
@@ -146,6 +160,8 @@ export default function InvoiceForm({ mode, invoiceId, initial }: Props) {
         issue_date: issueDate,
         due_date: dueDate || null,
         global_discount: toNumber(globalDiscount),
+        irpf_rate: toNumber(irpfRate),
+        invoice_type: invoiceType,
         notes: notes || null,
         lines: payloadLines,
       };
@@ -185,6 +201,13 @@ export default function InvoiceForm({ mode, invoiceId, initial }: Props) {
           <Input label="Fecha emisión" type="date" value={issueDate} onChange={(e) => setIssueDate(e.target.value)} />
           <Input label="Fecha vencimiento" type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
           <Input label="Descuento global (%)" type="number" step="0.01" value={globalDiscount} onChange={(e) => setGlobalDiscount(e.target.value)} />
+          <Select
+            label="Tipo de factura"
+            value={invoiceType}
+            onChange={(e) => setInvoiceType(e.target.value)}
+            options={invoiceTypes}
+          />
+          <Input label="Retención IRPF (%)" type="number" step="0.01" value={irpfRate} onChange={(e) => setIrpfRate(e.target.value)} hint="15% habitual, 7% nuevos autónomos" />
         </div>
         <div className="mt-4">
           <Textarea label="Notas" value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} />
@@ -275,6 +298,12 @@ export default function InvoiceForm({ mode, invoiceId, initial }: Props) {
               <span>Total</span>
               <span>{money(totals.total)}</span>
             </div>
+            {toNumber(irpfRate) > 0 && (
+              <div className="flex justify-between text-sm text-slate-500">
+                <span>Retención IRPF</span>
+                <span>- {money(totals.irpfAmount)}</span>
+              </div>
+            )}
           </div>
         </div>
       </Card>

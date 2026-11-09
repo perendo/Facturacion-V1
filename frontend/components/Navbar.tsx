@@ -2,7 +2,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { getToken, getUser, clearAuth } from "@/lib/auth";
+import { isAuthenticated, getUser, clearAuth } from "@/lib/auth";
 import type { User } from "@/lib/types";
 import Button from "@/components/ui/Button";
 
@@ -11,6 +11,7 @@ const nav = [
   { href: "/clients", label: "Clientes" },
   { href: "/products", label: "Productos" },
   { href: "/invoices", label: "Facturas" },
+  { href: "/settings/profile", label: "Perfil fiscal" },
 ];
 
 export default function Navbar() {
@@ -24,8 +25,8 @@ export default function Navbar() {
     setUserState(getUser<User>());
   }, []);
 
-  const token = mounted ? getToken() : null;
-  if (!token) return null;
+  const isAuth = mounted ? isAuthenticated() : false;
+  if (!isAuth) return null;
 
   const logout = () => {
     clearAuth();
